@@ -1490,8 +1490,8 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('uploadMachinesBtn').addEventListener('click', function(){ if (checkManagerPin('upload a machine report')) document.getElementById('machinesFileInput').click(); });
   document.getElementById('rankingsFileInput').addEventListener('change', handleRankingsUpload);
   document.getElementById('machinesFileInput').addEventListener('change', handleMachinesUpload);
-  document.getElementById('rankingsBackBtn').addEventListener('click', function(){ showScreen('screenDashboard'); });
-  document.getElementById('machinesBackBtn').addEventListener('click', function(){ showScreen('screenDashboard'); });
+  document.getElementById('rankingsBackBtn').addEventListener('click', goToDashboard);
+  document.getElementById('machinesBackBtn').addEventListener('click', goToDashboard);
   document.getElementById('uploadPreviewClose').addEventListener('click', function(){ closeModal('modalUploadPreview'); });
   document.getElementById('uploadPreviewCancel').addEventListener('click', function(){ closeModal('modalUploadPreview'); });
   document.getElementById('rankingsSearch').addEventListener('input', renderRankingsTable);
@@ -1512,7 +1512,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.addEventListener('click', function(){ applyRecapPreset(btn.dataset.preset); });
   });
   document.getElementById('metricBackBtn').addEventListener('click', goBack);
-  document.getElementById('listsBackBtn').addEventListener('click', function(){ showScreen('screenDashboard'); });
+  document.getElementById('listsBackBtn').addEventListener('click', goToDashboard);
   document.getElementById('listDetailBackBtn').addEventListener('click', function(){ showScreen('screenLists'); renderListsScreen(); });
   document.getElementById('tabMyLists').addEventListener('click', function(){ renderListsScreen(); });
   document.getElementById('newListBtn').addEventListener('click', openNewListModal);
@@ -1523,7 +1523,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('addToListCancel').addEventListener('click', function(){ closeModal('modalAddToList'); });
   document.getElementById('bulkCancelBtn').addEventListener('click', exitSelectMode);
   document.getElementById('tabTerritoryUpdates').addEventListener('click', openTerritoryUpdates);
-  document.getElementById('tuBackBtn').addEventListener('click', function(){ showScreen('screenDashboard'); });
+  document.getElementById('tuBackBtn').addEventListener('click', goToDashboard);
   document.getElementById('newTuBtn').addEventListener('click', function(){ openTuModal(null); });
   document.getElementById('tuEditClose').addEventListener('click', function(){ closeModal('modalTuEdit'); });
   document.getElementById('tuEditCancel').addEventListener('click', function(){ closeModal('modalTuEdit'); });
@@ -1738,6 +1738,18 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
 }
+
+// Any time we land back on the rep dashboard from somewhere else, the
+// Overdue/This Week/Next Week trackers and the big-box metrics need to be
+// recalculated — they're computed once and cached in the DOM, not live
+// bindings, so returning to the screen without this call just shows
+// whatever numbers were there the last time updateStats() ran (often stale
+// after logging a visit, editing personnel, converting an account, etc).
+function goToDashboard() {
+  showScreen('screenDashboard');
+  updateStats();
+  renderList();
+}
 var previousScreen = 'screenDashboard';
 
 function goBack() {
@@ -1757,7 +1769,7 @@ function goBack() {
   } else if (dest === 'screenCompanyMachines') {
     showScreen('screenCompanyMachines');
   } else {
-    showScreen('screenDashboard'); updateStats(); renderList();
+    goToDashboard();
   }
 }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -6177,8 +6189,7 @@ function openAddToListByListId(listId) {
   allListItems.filter(function(i){ return i.list_id===listId; }).forEach(function(i){
     window._selectedAccountIds[i.account_id] = 'existing';  // 'existing' vs true = already in list
   });
-  showScreen('screenDashboard');
-  renderList();
+  goToDashboard();
   updateBulkBar();
 }
 
