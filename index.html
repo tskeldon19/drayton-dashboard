@@ -390,6 +390,8 @@
   .pto-cal-daynums { display:grid; grid-template-columns:repeat(7,1fr); }
   .pto-cal-daynum { text-align:center; font-size:11px; color:var(--gray-3); padding:4px 0; border-top:1px solid var(--gray-2); }
   .pto-cal-daynum.today { color:var(--gold); font-weight:700; }
+  .pto-cal-daynum.other-month { color:var(--gray-2); opacity:0.5; }
+  .agenda-cal-daycell.other-month { opacity:0.5; }
   .pto-cal-bars { position:relative; margin-top:2px; }
   .pto-bar { position:absolute; height:18px; line-height:18px; font-size:10px; color:#1a1a1a; background:var(--gold); border-radius:4px; padding:0 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:700; cursor:default; }
   .expand-btn { background: var(--black); border: none; border-top: 1px solid var(--gray-1); color: var(--gold); width: 100%; padding: 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
@@ -2075,9 +2077,18 @@ function renderAgendaCalendarGrid() {
   items.forEach(function(i){ (itemsByDate[i.date] = itemsByDate[i.date]||[]).push(i); });
 
   var cells = [];
-  for (var i=0; i<startOffset; i++) cells.push(null);
-  for (var d=1; d<=daysInMonth; d++) cells.push(new Date(year, month, d));
-  while (cells.length % 7 !== 0) cells.push(null);
+  // Instead of leaving blank cells before day 1 / after the last day, fill
+  // them with the real dates from the adjacent month so a week that spans
+  // a month boundary shows a complete Sun–Sat row rather than getting cut
+  // off. These are flagged with otherMonth so they can be dimmed via CSS
+  // while still being clickable/showing their items normally.
+  var prevMonthDays = new Date(year, month, 0).getDate();
+  for (var i=startOffset-1; i>=0; i--) {
+    cells.push({date:new Date(year, month-1, prevMonthDays-i), otherMonth:true});
+  }
+  for (var d=1; d<=daysInMonth; d++) cells.push({date:new Date(year, month, d), otherMonth:false});
+  var nextDay=1;
+  while (cells.length % 7 !== 0) { cells.push({date:new Date(year, month+1, nextDay), otherMonth:true}); nextDay++; }
   var weeks = [];
   for (var w=0; w<cells.length; w+=7) weeks.push(cells.slice(w, w+7));
 
@@ -2093,12 +2104,12 @@ function renderAgendaCalendarGrid() {
 
   weeks.forEach(function(week){
     html += '<div class="pto-cal-week">'+
-      '<div class="pto-cal-daynums">'+week.map(function(d){ return '<div class="pto-cal-daynum'+(d && toKey(d)===todayKey?' today':'')+'">'+(d?d.getDate():'')+'</div>'; }).join('')+'</div>'+
-      '<div class="agenda-cal-items">'+week.map(function(d){
-        if (!d) return '<div class="agenda-cal-daycell"></div>';
+      '<div class="pto-cal-daynums">'+week.map(function(c){ return '<div class="pto-cal-daynum'+(toKey(c.date)===todayKey?' today':'')+(c.otherMonth?' other-month':'')+'">'+c.date.getDate()+'</div>'; }).join('')+'</div>'+
+      '<div class="agenda-cal-items">'+week.map(function(c){
+        var d = c.date;
         var dayItems = itemsByDate[toKey(d)] || [];
         var shown = dayItems.slice(0,2);
-        return '<div class="agenda-cal-daycell">'+
+        return '<div class="agenda-cal-daycell'+(c.otherMonth?' other-month':'')+'">'+
           shown.map(function(it){ return '<div class="agenda-cal-item" data-account-id="'+esc(it.account_id)+'" style="cursor:pointer" title="'+esc(it.title)+' — '+esc(it.subtitle)+(it.notes?': '+esc(it.notes):'')+'">'+esc(it.title)+'</div>'; }).join('')+
           (dayItems.length>2 ? '<div class="agenda-cal-more">+'+(dayItems.length-2)+' more</div>' : '')+
         '</div>';
